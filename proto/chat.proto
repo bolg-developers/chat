@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+service ChatService {
+    rpc CreateRoom(google.protobuf.Empty) returns (Room) {}
+    rpc GetRoomAll(google.protobuf.Empty) returns (Rooms) {}
+    rpc Stream(stream StreamRequest) returns (stream StreamResponse) {}
+}
+
+message StreamRequest {
+   oneof event {
+      JoinRoom join_room = 1;
+      LeaveRoom leave_room = 2;
+      SendMessage send_message = 3;
+      GetRoommateAll get_roommate_all = 4;
+   }
+
+   message JoinRoom {
+       string room_id = 1;
+       Person person = 2;
+   }
+
+   message LeaveRoom {
+       string room_id = 1;
+       string person_name = 2;
+   }
+
+   message SendMessage {
+       string room_id = 1;
+       string person_name = 2;
+       string message = 3;
+   }
+
+   message GetRoommateAll {
+       string room_id = 1;
+   }
+}
+
+message StreamResponse {
+    oneof event {
+        JoinRoom join_room = 1;
+        LeaveRoom leave_room = 2;
+        SendMessage send_message = 3;
+        GetRoommateAll get_roommate_all = 4;
+    }
+
+    message JoinRoom {
+        Person person = 1;
+    }
+
+    message LeaveRoom {
+        string person_name = 1;
+    }
+
+    message SendMessage {
+        string person_name = 1;
+        string message = 2;
+    }
+
+    message GetRoommateAll {
+        Persons persons = 1;
+    }
+}
+
+message Person {
+    string name = 1;
+    string sex = 2;
+    string age = 3;
+}
+
+message Persons {
+    repeated Person persons = 1;
+}
+
+message Room {
+    string id = 1;
+}
+
+message Rooms {
+    repeated Room rooms = 1;
+}
