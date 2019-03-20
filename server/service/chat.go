@@ -132,6 +132,7 @@ func (s ChatService) Stream(stream protobuf.ChatService_StreamServer) error {
 				log.Printf("room_id=%s: ストリームの登録解除に失敗しました", e.LeaveRoom.RoomId)
 				return errors.New("ストリームの登録解除に失敗しました")
 			}
+			s.streams[e.LeaveRoom.RoomId] = newStreams
 
 			s.broadcast(e.LeaveRoom.RoomId, &protobuf.StreamResponse{
 				Event: &protobuf.StreamResponse_LeaveRoom_{
