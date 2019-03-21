@@ -7,6 +7,8 @@ import (
 	"github.com/bolg-developers/chat/server/protobuf"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/rs/xid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"io"
 	"log"
 )
@@ -130,6 +132,7 @@ func (s ChatService) Stream(stream protobuf.ChatService_StreamServer) error {
 				log.Printf("room_id=%s: ストリームの登録解除に失敗しました", e.LeaveRoom.RoomId)
 				return errors.New("ストリームの登録解除に失敗しました")
 			}
+			s.streams[e.LeaveRoom.RoomId] = newStreams
 
 			s.broadcast(e.LeaveRoom.RoomId, &protobuf.StreamResponse{
 				Event: &protobuf.StreamResponse_LeaveRoom_{
@@ -158,7 +161,7 @@ func (s ChatService) Stream(stream protobuf.ChatService_StreamServer) error {
 				Event: &protobuf.StreamResponse_SendMessage_{
 					SendMessage: &protobuf.StreamResponse_SendMessage{
 						PersonName: e.SendMessage.PersonName,
-						Message: e.SendMessage.Message,
+						Message:    e.SendMessage.Message,
 					},
 				},
 			})
@@ -182,7 +185,15 @@ func (s ChatService) Stream(stream protobuf.ChatService_StreamServer) error {
 func (s ChatService) broadcast(roomId string, res *protobuf.StreamResponse) {
 	for _, strm := range s.streams[roomId] {
 		if err := strm.Send(res); err != nil {
-			log.Printf("ブロードキャストエラー[%s]: %s", roomId, err.Error())
+			if status.Code(err) == codes.Unavailable {
+				newStreams := make([]protobuf.ChatService_StreamServer, 0)
+				for _, strm2 := range s.streams[roomId] {
+					if strm2 != strm {
+						newStreams = append(newStreams, strm2)
+					}
+				}
+				s.streams[roomId] = newStreams
+			}
 		}
 	}
 }
